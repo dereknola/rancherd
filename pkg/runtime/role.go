@@ -54,7 +54,9 @@ func ToConfig(config *config.RuntimeConfig, clusterInit bool) ([]byte, error) {
 		config.ConfigValues,
 	}
 
-	configObjects = append(configObjects, config)
+	if clusterInit {
+		configObjects = append(configObjects, config)
+	}
 
 	result := map[string]interface{}{}
 	for _, data := range configObjects {
@@ -64,9 +66,6 @@ func ToConfig(config *config.RuntimeConfig, clusterInit bool) ([]byte, error) {
 		}
 		delete(data, "extraConfig")
 		delete(data, "role")
-		if !clusterInit {
-			delete(data, "token")
-		}
 		for oldKey, newKey := range normalizeNames {
 			value, ok := data[oldKey]
 			if !ok {
