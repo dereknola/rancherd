@@ -19,6 +19,10 @@ import (
 type plan applyinator.Plan
 
 func toInitPlan(config *config.Config, dataDir string) (*applyinator.Plan, error) {
+	if err := assignTokenIfUnset(config); err != nil {
+		return nil, err
+	}
+
 	plan := plan{}
 	if err := plan.addFiles(config, dataDir); err != nil {
 		return nil, err
@@ -44,15 +48,15 @@ func toJoinPlan(cfg *config.Config, dataDir string) (*applyinator.Plan, error) {
 	}
 
 	plan := plan{}
-	k8sVersion, err := versions.K8sVersion(cfg)
+	k8sVersion, err := versions.K8sVersion(cfg.KubernetesVersion)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := plan.addFile(runtime.ToFile(&cfg.RuntimeConfig, config.GetRuntime(k8sVersion), false)); err != nil {
+	if err := plan.addFile(join.ToScriptFile(cfg, dataDir)); err != nil {
 		return nil, err
 	}
-	if err := plan.addFile(join.ToScriptFile(cfg, dataDir)); err != nil {
+	if err := plan.addFile(runtime.ToFile(&cfg.RuntimeConfig, config.GetRuntime(k8sVersion), false)); err != nil {
 		return nil, err
 	}
 	if err := plan.addInstruction(join.ToInstruction(cfg, dataDir)); err != nil {
@@ -76,7 +80,7 @@ func ToPlan(ctx context.Context, config *config.Config, dataDir string) (*applyi
 }
 
 func (p *plan) addInstructions(cfg *config.Config, dataDir string) error {
-	k8sVersion, err := versions.K8sVersion(cfg)
+	k8sVersion, err := versions.K8sVersion(cfg.KubernetesVersion)
 	if err != nil {
 		return err
 	}
@@ -89,7 +93,7 @@ func (p *plan) addInstructions(cfg *config.Config, dataDir string) error {
 		return err
 	}
 
-	rancherVersion, err := versions.RancherVersion(cfg)
+	rancherVersion, err := versions.RancherVersion(cfg.RancherVersion)
 	if err != nil {
 		return err
 	}
@@ -118,7 +122,7 @@ func (p *plan) addInstruction(instruction *applyinator.Instruction, err error) e
 }
 
 func (p *plan) addFiles(cfg *config.Config, dataDir string) error {
-	k8sVersions, err := versions.K8sVersion(cfg)
+	k8sVersions, err := versions.K8sVersion(cfg.KubernetesVersion)
 	if err != nil {
 		return err
 	}
@@ -136,11 +140,6 @@ func (p *plan) addFiles(cfg *config.Config, dataDir string) error {
 
 	// registries.yaml
 	if err := p.addFile(registry.ToFile(cfg.Registries, runtimeName)); err != nil {
-		return err
-	}
-
-	// manifests
-	if err := p.addFile(resources.ToFile(cfg.Resources, resources.GetManifests(runtimeName))); err != nil {
 		return err
 	}
 
@@ -162,7 +161,7 @@ func (p *plan) addFile(file *applyinator.File, err error) error {
 }
 
 func (p *plan) addProbesForRoles(cfg *config.Config) error {
-	k8sVersion, err := versions.K8sVersion(cfg)
+	k8sVersion, err := versions.K8sVersion(cfg.KubernetesVersion)
 	if err != nil {
 		return err
 	}
@@ -171,7 +170,7 @@ func (p *plan) addProbesForRoles(cfg *config.Config) error {
 }
 
 func (p *plan) addProbes(cfg *config.Config) error {
-	k8sVersion, err := versions.K8sVersion(cfg)
+	k8sVersion, err := versions.K8sVersion(cfg.KubernetesVersion)
 	if err != nil {
 		return err
 	}
